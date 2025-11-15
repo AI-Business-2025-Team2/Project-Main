@@ -2,7 +2,8 @@ require('dotenv').config(); // .env 파일 불러오기
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const News = require('./models/News'); // 방금 만든 모델 불러오기
+const News = require('./models/News');
+const Course = require('./models/Course');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -46,11 +47,26 @@ app.get('/api/news', async (req, res) => {
 });
 
 // -------------------------------------------------------
+// 🏫 학습(Course) 관련 API
+// -------------------------------------------------------
+
+// 1. 강의 목록 가져오기
+app.get('/api/courses', async (req, res) => {
+  try {
+    const courses = await Course.find();
+    res.json(courses);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// -------------------------------------------------------
 // 🌱 초기 데이터 자동 생성 (Seeding)
 // -------------------------------------------------------
 async function seedDatabase() {
-  const count = await News.countDocuments();
-  if (count === 0) {
+  const newsCount = await News.countDocuments();
+  
+  if (newsCount === 0) {
     console.log('📦 DB가 비어있어서 초기 데이터를 넣습니다...');
     await News.insertMany([
       {
@@ -77,6 +93,55 @@ async function seedDatabase() {
     ]);
     console.log('✨ 초기 데이터 생성 완료!');
   }
+
+  const courseCount = await Course.countDocuments();
+  if (courseCount === 0) {
+    console.log('📦 강의 데이터를 생성합니다...');
+    await Course.insertMany([
+      {
+        title: '금융 기초',
+        description: '돈의 흐름과 기본 용어 정복',
+        iconName: 'account_balance',
+        colorHex: '0xFF2196F3', // 파랑
+        totalLectures: 12,
+        progress: 45
+      },
+      {
+        title: '주식 투자',
+        description: '차트 보는 법부터 매매까지',
+        iconName: 'show_chart',
+        colorHex: '0xFFF44336', // 빨강
+        totalLectures: 8,
+        progress: 10
+      },
+      {
+        title: '부동산',
+        description: '내 집 마련을 위한 필수 지식',
+        iconName: 'apartment',
+        colorHex: '0xFFFF9800', // 주황
+        totalLectures: 5,
+        progress: 0
+      },
+      {
+        title: '가상 화폐',
+        description: '블록체인과 비트코인의 이해',
+        iconName: 'currency_bitcoin',
+        colorHex: '0xFFFFC107', // 노랑
+        totalLectures: 4,
+        progress: 0
+      },
+       {
+        title: '세금/법률',
+        description: '알아두면 돈이 되는 절세 꿀팁',
+        iconName: 'shield',
+        colorHex: '0xFF009688', // 청록
+        totalLectures: 6,
+        progress: 0
+      },
+    ]);
+    console.log('✨ 강의 데이터 생성 완료!');
+  }
+  
 }
 // DB 연결 후 시딩 실행
 mongoose.connection.once('open', seedDatabase);

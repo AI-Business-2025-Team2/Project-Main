@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // 방금 설치한 http 패키지
 import 'quiz_screen.dart'; // 퀴즈 화면
+import 'profile_screen.dart';
+import 'article_detail_screen.dart';
+import 'learn_screen.dart';
+import 'review_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -39,9 +43,9 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = [
     const HomeNewsFeed(), 
-    const Center(child: Text('학습 화면 준비중')),
-    const Center(child: Text('복습 화면 준비중')),
-    const Center(child: Text('프로필 화면 준비중')),
+    const LearnScreen(),
+    const ReviewScreen(),
+    const ProfileScreen(),
   ];
 
   @override
@@ -215,85 +219,102 @@ class NewsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3E8FF),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(category, style: const TextStyle(color: Color(0xFF8B5CF6), fontWeight: FontWeight.bold, fontSize: 12)),
-              ),
-              const SizedBox(width: 8),
-              Text('$source · $time', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              const Spacer(),
-              const Text('📈 인기', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.3)),
-          const SizedBox(height: 8),
-          Text(summary, style: TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.5), maxLines: 3, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: tags.map((tag) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(color: const Color(0xFFF3E8FF), borderRadius: BorderRadius.circular(20)),
-              child: Text(tag, style: const TextStyle(color: Color(0xFF7C3AED), fontSize: 12)),
-            )).toList(),
-          ),
-          if (showButton) ...[
-            const SizedBox(height: 20),
-            Container(
-              width: double.infinity,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFFAC55FF), Color(0xFFFF4F8B)]),
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const QuizScreen()));
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.auto_awesome, color: Colors.white, size: 20),
-                    SizedBox(width: 8),
-                    Text('학습 시작하고 50 XP 받기', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                    SizedBox(width: 4),
-                    Icon(Icons.favorite_border, color: Colors.white, size: 20),
-                  ],
-                ),
-              ),
+    // GestureDetector로 감싸서 터치 이벤트 처리
+    return GestureDetector(
+      onTap: () {
+        // 상세 화면으로 이동!
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArticleDetailScreen(
+              title: title,
+              source: source,
+              time: time,
+              category: category,
             ),
-          ]
-        ],
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3E8FF),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(category, style: const TextStyle(color: Color(0xFF8B5CF6), fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+                const SizedBox(width: 8),
+                Text('$source · $time', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                const Spacer(),
+                const Text('📈 인기', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.3)),
+            const SizedBox(height: 8),
+            Text(summary, style: TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.5), maxLines: 3, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: tags.map((tag) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: const Color(0xFFF3E8FF), borderRadius: BorderRadius.circular(20)),
+                child: Text(tag, style: const TextStyle(color: Color(0xFF7C3AED), fontSize: 12)),
+              )).toList(),
+            ),
+            if (showButton) ...[
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFFAC55FF), Color(0xFFFF4F8B)]),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const QuizScreen()));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+                      SizedBox(width: 8),
+                      Text('학습 시작하고 50 XP 받기', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      SizedBox(width: 4),
+                      Icon(Icons.favorite_border, color: Colors.white, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ]
+          ],
+        ),
       ),
     );
   }
