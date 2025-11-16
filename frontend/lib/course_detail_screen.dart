@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'lesson_screen.dart';
 
 class CourseDetailScreen extends StatelessWidget {
   final String title;
@@ -123,9 +124,14 @@ class CourseDetailScreen extends StatelessWidget {
                       ? null 
                       : const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
                     onTap: isLocked ? null : () {
-                      // 나중에 여기서 실제 학습 화면(영상/글)으로 이동
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('학습을 시작합니다! 📖')),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => LessonScreen(
+                            chapterTitle: '강의 주제 예시입니다', // 실제로는 리스트의 제목을 넘겨주면 됨
+                            chapterIndex: index,
+                          ),
+                        ),
                       );
                     },
                   ),
