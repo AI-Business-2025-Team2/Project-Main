@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'quiz_screen.dart';
 
 class LessonScreen extends StatelessWidget {
   final String chapterTitle;
@@ -38,21 +39,26 @@ class LessonScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16.0),
           child: ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('🎉 학습 완료! 경험치가 올랐습니다!'),
-                  backgroundColor: Colors.green,
-                ),
+              // 퀴즈 화면으로 이동! (Replace를 써서 뒤로가기 시 학습 화면 건너뛰기)
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const QuizScreen()),
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF8B5CF6), // 보라색
+              backgroundColor: const Color(0xFF8B5CF6),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
-            child: const Text('학습 완료', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            child: const Row( // 아이콘 추가해서 좀 더 있어 보이게
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.quiz),
+                SizedBox(width: 8),
+                Text('퀴즈 풀고 완료하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
           ),
         ),
       ),

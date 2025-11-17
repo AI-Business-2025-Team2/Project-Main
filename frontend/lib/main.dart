@@ -3,7 +3,7 @@ import 'dart:io';      // OS 확인용 (Android vs iOS)
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // 방금 설치한 http 패키지
-import 'quiz_screen.dart'; // 퀴즈 화면
+// import 'quiz_screen.dart'; // 퀴즈 화면
 import 'profile_screen.dart';
 import 'article_detail_screen.dart';
 import 'learn_screen.dart';
@@ -177,6 +177,7 @@ class _HomeNewsFeedState extends State<HomeNewsFeed> {
                 separatorBuilder: (context, index) => const SizedBox(height: 16),
                 itemBuilder: (context, index) {
                   var item = news[index];
+                  
                   return NewsCard(
                     category: item['category'] ?? '뉴스',
                     source: item['source'] ?? '언론사',
@@ -184,7 +185,11 @@ class _HomeNewsFeedState extends State<HomeNewsFeed> {
                     title: item['title'] ?? '제목 없음',
                     summary: item['summary'] ?? '내용 없음',
                     tags: List<String>.from(item['tags'] ?? []),
-                    showButton: index == 0, // 첫 번째 뉴스에만 버튼 표시 (예시)
+                    
+                    // 👇 [새로 추가된 부분] 상세 화면을 위한 데이터 전달
+                    content: item['content'],       // 본문
+                    aiSummary: item['aiSummary'],   // AI 요약
+                    keyConcepts: item['keyConcepts'], // 핵심 개념 리스트
                   );
                 },
               );
@@ -204,7 +209,11 @@ class NewsCard extends StatelessWidget {
   final String title;
   final String summary;
   final List<String> tags;
-  final bool showButton;
+  
+  // 상세 화면으로 넘겨줄 데이터 추가
+  final String? content;
+  final String? aiSummary;
+  final List<dynamic>? keyConcepts;
 
   const NewsCard({
     super.key,
@@ -214,24 +223,22 @@ class NewsCard extends StatelessWidget {
     required this.title,
     required this.summary,
     required this.tags,
-    this.showButton = true,
+    this.content,
+    this.aiSummary,
+    this.keyConcepts,
   });
 
   @override
   Widget build(BuildContext context) {
-    // GestureDetector로 감싸서 터치 이벤트 처리
     return GestureDetector(
       onTap: () {
-        // 상세 화면으로 이동!
+        // 상세 화면으로 이동하며 데이터 전달
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ArticleDetailScreen(
-              title: title,
-              source: source,
-              time: time,
-              category: category,
-            ),
+            // ArticleDetailScreen에 생성자를 추가해야 데이터를 받을 수 있음
+            // (일단은 UI 테스트용으로 넘기는 척만 하고, 다음 단계에서 ArticleDetailScreen 생성자를 뚫을 예정)
+            builder: (context) => const ArticleDetailScreen(), 
           ),
         );
       },
@@ -282,37 +289,6 @@ class NewsCard extends StatelessWidget {
                 child: Text(tag, style: const TextStyle(color: Color(0xFF7C3AED), fontSize: 12)),
               )).toList(),
             ),
-            if (showButton) ...[
-              const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFFAC55FF), Color(0xFFFF4F8B)]),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const QuizScreen()));
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.auto_awesome, color: Colors.white, size: 20),
-                      SizedBox(width: 8),
-                      Text('학습 시작하고 50 XP 받기', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                      SizedBox(width: 4),
-                      Icon(Icons.favorite_border, color: Colors.white, size: 20),
-                    ],
-                  ),
-                ),
-              ),
-            ]
           ],
         ),
       ),
