@@ -186,7 +186,6 @@ class _HomeNewsFeedState extends State<HomeNewsFeed> {
                     summary: item['summary'] ?? '내용 없음',
                     tags: List<String>.from(item['tags'] ?? []),
                     
-                    // 👇 [새로 추가된 부분] 상세 화면을 위한 데이터 전달
                     content: item['content'],       // 본문
                     aiSummary: item['aiSummary'],   // AI 요약
                     keyConcepts: item['keyConcepts'], // 핵심 개념 리스트
