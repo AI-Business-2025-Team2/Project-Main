@@ -14,7 +14,8 @@ async function fetchAndSaveNews() {
   console.log('📰 뉴스 수집을 시작합니다...');
   
   const API_KEY = process.env.NEWS_API_KEY;
-  const URL = `https://newsapi.org/v2/top-headlines?country=kr&category=business&pageSize=10&apiKey=${API_KEY}`; // 한국(kr) 비즈니스 뉴스 10개
+  const URL = `https://newsapi.org/v2/everything?q=finance&language=en&sortBy=publishedAt&pageSize=10&apiKey=${API_KEY}`;
+  // const URL = `https://newsapi.org/v2/top-headlines?country=kr&category=business&pageSize=10&apiKey=${API_KEY}`; // 한국(kr) 비즈니스 뉴스 10개
 
   try {
     const response = await axios.get(URL);
