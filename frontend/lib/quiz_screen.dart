@@ -1,56 +1,55 @@
 import 'package:flutter/material.dart';
 
 class QuizScreen extends StatefulWidget {
-  const QuizScreen({super.key});
+  // 서버에서 받은 퀴즈 데이터 (question, options, answerIndex)
+  final Map<String, dynamic> quizData;
+
+  const QuizScreen({
+    super.key,
+    required this.quizData,
+  });
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
 }
 
 class _QuizScreenState extends State<QuizScreen> {
-  // 선택된 답의 인덱스 (-1은 선택 안 함)
   int _selectedOptionIndex = -1;
-  // 정답 확인 여부
   bool _isSubmitted = false;
-
-  // 더미 퀴즈 데이터
-  final String question = "한국은행이 이번에 유지하기로 결정한\n기준금리는 몇 %인가요?";
-  final List<String> options = ["2.5%", "3.0%", "3.5%", "3.75%"];
-  final int correcterAnswerIndex = 2; // 3.5%가 정답
 
   void _checkAnswer() {
     setState(() {
       _isSubmitted = true;
     });
 
-    // 정답 시 축하 메시지 (SnackBar)
-    if (_selectedOptionIndex == correcterAnswerIndex) {
+    // 정답 확인 로직
+    // DB에는 answerIndex가 0~3 숫자로 저장되어 있음
+    int correctAnswerIndex = widget.quizData['answerIndex'];
+
+    if (_selectedOptionIndex == correctAnswerIndex) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('🎉 정답입니다! +50 XP 획득!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
+        const SnackBar(content: Text('🎉 정답입니다! +50 XP 획득!'), backgroundColor: Colors.green),
       );
     } else {
        ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('😢 아쉽네요. 다시 읽어볼까요?'),
-          backgroundColor: Colors.redAccent,
-          duration: Duration(seconds: 2),
-        ),
+        const SnackBar(content: Text('😢 오답입니다. 다시 공부해보세요!'), backgroundColor: Colors.redAccent),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // 데이터 바인딩
+    String question = widget.quizData['question'];
+    List<dynamic> options = widget.quizData['options'];
+    int correctAnswerIndex = widget.quizData['answerIndex'];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("오늘의 퀴즈"),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => Navigator.pop(context), // 닫기 버튼
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: Padding(
@@ -58,33 +57,29 @@ class _QuizScreenState extends State<QuizScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 진행바 (Progress Bar)
             LinearProgressIndicator(
-              value: 0.5, // 50% 진행
+              value: 1.0,
               backgroundColor: Colors.grey[200],
               color: const Color(0xFF8B5CF6),
               borderRadius: BorderRadius.circular(10),
             ),
             const SizedBox(height: 30),
 
-            // 질문 텍스트
-            const Text(
-              "Q. 핵심 개념 체크",
-              style: TextStyle(color: Color(0xFF8B5CF6), fontWeight: FontWeight.bold),
-            ),
+            const Text("Q. 핵심 개념 체크", style: TextStyle(color: Color(0xFF8B5CF6), fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
+            
+            // 진짜 질문 표시
             Text(
               question,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, height: 1.4),
             ),
             const SizedBox(height: 40),
 
-            // 보기 리스트
+            // 진짜 보기 리스트 표시
             ...List.generate(options.length, (index) {
               bool isSelected = _selectedOptionIndex == index;
-              bool isCorrect = index == correcterAnswerIndex;
+              bool isCorrect = index == correctAnswerIndex;
               
-              // 색상 결정 로직
               Color borderColor = Colors.grey.shade300;
               Color bgColor = Colors.white;
               IconData? icon;
@@ -121,7 +116,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   child: Row(
                     children: [
                       Text(
-                        options[index],
+                        options[index], // 보기 텍스트
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -139,7 +134,6 @@ class _QuizScreenState extends State<QuizScreen> {
             
             const Spacer(),
 
-            // 제출 버튼
             SizedBox(
               width: double.infinity,
               height: 56,

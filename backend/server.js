@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const News = require('./models/News');
 const Course = require('./models/Course');
+const Lesson = require('./models/Lesson');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -77,106 +78,95 @@ app.get('/api/courses', async (req, res) => {
   }
 });
 
+app.get('/api/courses/:id/lessons', async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    // 해당 코스 ID를 가진 레슨들을 챕터 순서대로 가져옴
+    const lessons = await Lesson.find({ courseId: courseId }).sort({ chapterIndex: 1 });
+    res.json(lessons);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // -------------------------------------------------------
 // 🌱 초기 데이터 자동 생성 (Seeding)
 // -------------------------------------------------------
+
 async function seedDatabase() {
+  // 1. 뉴스 데이터 (보존 모드 - 주석 유지)
+  // await News.deleteMany({}); 
+  
+  // 2. 코스 및 레슨 데이터 초기화 (개발용: 싹 지우고 다시 생성)
+  await Course.deleteMany({});
+  await Lesson.deleteMany({});
+  console.log('📦 코스 및 레슨 데이터를 새로 생성합니다...');
 
-  // await News.deleteMany({}); // 삭제 로직, 실제에서 사용 X
-  const newsCount = await News.countDocuments();
-  if (newsCount === 0) {
-    console.log('📦 뉴스 데이터를 새로 생성합니다 (AI 분석 스타일)...');
-    await News.insertMany([
-      {
-        title: "미국 연준, 기준금리 동결... '연내 인하 가능성 열려있다'",
-        originalUrl: "https://example.com/news/1",
-        imageUrl: "https://source.unsplash.com/random/800x600/?finance",
-        source: "글로벌경제",
-        category: "거시경제",
-        content: "미국 연방준비제도(Fed)가 기준금리를 현재 수준인 5.25~5.50%로 동결했습니다. 연방공개시장위원회(FOMC)는 성명을 통해 인플레이션이 목표치인 2%를 향해 움직이고 있다는 확신을 얻기 전까지는 금리를 인하하지 않겠다는 입장을 재확인했습니다. 하지만 제롬 파월 의장은...",
-        
-        // AI 요약
-        aiSummary: "1. 미국 연준이 기준금리를 5.25~5.50%로 동결했습니다.\n2. 인플레이션 목표 달성 전까지 섣부른 인하는 없다고 밝혔습니다.\n3. 피벗 가능성을 시사하며 시장은 긍정적으로 반응했습니다.",
-        
-        // 핵심 개념 (하이라이트 및 설명)
-        keyConcepts: [
-          { term: "연방준비제도", explanation: "미국의 중앙은행 시스템으로 통화 정책을 관장합니다." },
-          { term: "기준금리", explanation: "중앙은행이 시중 은행과 거래할 때 적용하는 금리입니다." },
-          { term: "FOMC", explanation: "미국의 통화정책을 결정하는 최고 의사결정 기구입니다." }
-        ],
-        
-        publishedAt: new Date()
-      },
-      {
-        title: "비트코인, 현물 ETF 승인 기대감에 4만 달러 돌파",
-        originalUrl: "https://example.com/news/2",
-        imageUrl: "https://source.unsplash.com/random/800x600/?bitcoin",
-        source: "코인뉴스",
-        category: "가상화폐",
-        content: "가상화폐 대장주 비트코인이 미국 증권거래위원회(SEC)의 현물 ETF 승인 기대감에 힘입어 4만 달러 선을 돌파했습니다. 이는 지난 2022년 4월 이후 약 20개월 만의 최고치입니다. 전문가들은 ETF가 승인될 경우 기관 자금이 대거 유입될 것으로 전망하고 있습니다.",
-        
-        aiSummary: "1. 비트코인이 20개월 만에 4만 달러를 돌파했습니다.\n2. 현물 ETF 승인에 대한 기대감이 주요 원인입니다.\n3. 승인 시 기관 자금 유입이 예상됩니다.",
-        
-        keyConcepts: [
-          { term: "현물 ETF", explanation: "실제 비트코인을 보유하고 이를 바탕으로 발행하는 상장지수펀드입니다." },
-          { term: "SEC", explanation: "미국 증권거래위원회로, 증권 시장을 감독하는 기관입니다." }
-        ],
+  // (1) 코스 생성
+  const courses = await Course.insertMany([
+    {
+      title: '금융 기초',
+      description: '돈의 흐름과 기본 용어 정복',
+      iconName: 'account_balance',
+      colorHex: '0xFF2196F3', // 파랑
+      totalLectures: 3,
+      progress: 0
+    },
+    {
+      title: '주식 투자',
+      description: '차트 보는 법부터 매매까지',
+      iconName: 'show_chart',
+      colorHex: '0xFFF44336', // 빨강
+      totalLectures: 2,
+      progress: 0
+    }
+  ]);
 
-        publishedAt: new Date()
+  // (2) 레슨 생성 (금융 기초 코스에 연결)
+  const financeCourseId = courses[0]._id; // 방금 만든 '금융 기초'의 ID
+
+  await Lesson.insertMany([
+    {
+      courseId: financeCourseId,
+      chapterIndex: 1,
+      title: "돈이란 무엇인가?",
+      duration: "5분",
+      content: "돈은 교환의 매개체이자 가치의 척도입니다. 과거에는 조개껍데기나 소금을 사용했지만...",
+      quiz: {
+        question: "돈의 3대 기능이 아닌 것은?",
+        options: ["교환의 매개", "가치 저장", "가치 척도", "기분 전환"],
+        answerIndex: 3
       }
-    ]);
-    console.log('✨ 뉴스 데이터 생성 완료 (AI 포맷)!');
-  }
+    },
+    {
+      courseId: financeCourseId,
+      chapterIndex: 2,
+      title: "금리의 이해",
+      duration: "8분",
+      content: "금리는 돈의 가격입니다. 내가 돈을 빌려 쓰면 그 대가로 이자를 내야 하는데, 이때 적용되는 비율을 금리라고 합니다...",
+      quiz: {
+        question: "금리가 올라가면 일반적으로 발생하는 현상은?",
+        options: ["예금 증가", "대출 증가", "소비 폭발", "물가 폭등"],
+        answerIndex: 0
+      }
+    },
+    {
+      courseId: financeCourseId,
+      chapterIndex: 3,
+      title: "인플레이션과 디플레이션",
+      duration: "10분",
+      content: "인플레이션은 물가가 지속적으로 오르는 현상이고, 디플레이션은 반대로 물가가 내리는 현상입니다...",
+      quiz: {
+        question: "물가가 지속적으로 상승하는 현상을 무엇이라 하는가?",
+        options: ["인플레이션", "디플레이션", "스태그플레이션", "리세션"],
+        answerIndex: 0
+      }
+    }
+  ]);
 
-  const courseCount = await Course.countDocuments();
-  if (courseCount === 0) {
-    console.log('📦 강의 데이터를 생성합니다...');
-    await Course.insertMany([
-      {
-        title: '금융 기초',
-        description: '돈의 흐름과 기본 용어 정복',
-        iconName: 'account_balance',
-        colorHex: '0xFF2196F3', // 파랑
-        totalLectures: 12,
-        progress: 45
-      },
-      {
-        title: '주식 투자',
-        description: '차트 보는 법부터 매매까지',
-        iconName: 'show_chart',
-        colorHex: '0xFFF44336', // 빨강
-        totalLectures: 8,
-        progress: 10
-      },
-      {
-        title: '부동산',
-        description: '내 집 마련을 위한 필수 지식',
-        iconName: 'apartment',
-        colorHex: '0xFFFF9800', // 주황
-        totalLectures: 5,
-        progress: 0
-      },
-      {
-        title: '가상 화폐',
-        description: '블록체인과 비트코인의 이해',
-        iconName: 'currency_bitcoin',
-        colorHex: '0xFFFFC107', // 노랑
-        totalLectures: 4,
-        progress: 0
-      },
-       {
-        title: '세금/법률',
-        description: '알아두면 돈이 되는 절세 꿀팁',
-        iconName: 'shield',
-        colorHex: '0xFF009688', // 청록
-        totalLectures: 6,
-        progress: 0
-      },
-    ]);
-    console.log('✨ 강의 데이터 생성 완료!');
-  }
-
+  console.log('✨ 학습 데이터 생성 완료!');
 }
+
 // DB 연결 후 시딩 실행
 mongoose.connection.once('open', seedDatabase);
 

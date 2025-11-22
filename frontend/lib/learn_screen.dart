@@ -133,6 +133,18 @@ class _LearnScreenState extends State<LearnScreen> {
                       color: cardColor,
                       title: course['title'],
                       count: '${course['totalLectures']}강',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CourseDetailScreen(
+                              courseId: course['_id'], // MongoDB ID 전달
+                              title: course['title'],
+                              color: cardColor,
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );
@@ -199,6 +211,7 @@ class CategoryCard extends StatelessWidget {
   final Color color;
   final String title;
   final String count;
+  final VoidCallback onTap; // 👈 [추가] 클릭 이벤트를 외부에서 받기 위해 변수 추가
 
   const CategoryCard({
     super.key,
@@ -206,6 +219,7 @@ class CategoryCard extends StatelessWidget {
     required this.color,
     required this.title,
     required this.count,
+    required this.onTap, // 👈 [추가] 생성자에서 필수값으로 받음
   });
 
   @override
@@ -215,36 +229,39 @@ class CategoryCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.05), blurRadius: 10, spreadRadius: 2),
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => CourseDetailScreen(
-                  title: title, // 카드에 있던 제목 전달
-                  color: color, // 카드에 있던 색상 전달
-                ),
-              ),
-            );
-          },
+          onTap: onTap, // 👈 [연결] 받아온 함수를 여기서 실행!
           borderRadius: BorderRadius.circular(20),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(icon, color: color, size: 32),
               ),
               const SizedBox(height: 12),
-              Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 4),
-              Text(count, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              Text(
+                count,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
             ],
           ),
         ),
