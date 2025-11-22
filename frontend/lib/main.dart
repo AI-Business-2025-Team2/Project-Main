@@ -237,7 +237,17 @@ class NewsCard extends StatelessWidget {
           MaterialPageRoute(
             // ArticleDetailScreen에 생성자를 추가해야 데이터를 받을 수 있음
             // (일단은 UI 테스트용으로 넘기는 척만 하고, 다음 단계에서 ArticleDetailScreen 생성자를 뚫을 예정)
-            builder: (context) => const ArticleDetailScreen(), 
+            builder: (context) => ArticleDetailScreen(
+              title: title,
+              source: source,
+              date: time,
+              content: content ?? "본문 내용이 없습니다.", // null 처리
+              aiSummary: aiSummary ?? "AI 요약이 준비되지 않았습니다.",
+              keyConcepts: keyConcepts ?? [],
+              // NewsCard에 imageUrl 필드가 없다면 일단 null 처리하거나, 추가해야 함
+              // (만약 NewsCard에 imageUrl 필드가 없다면 아래 줄은 지우세요)
+              // imageUrl: imageUrl, 
+            ),
           ),
         );
       },

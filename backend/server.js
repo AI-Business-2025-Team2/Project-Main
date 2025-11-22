@@ -82,7 +82,7 @@ app.get('/api/courses', async (req, res) => {
 // -------------------------------------------------------
 async function seedDatabase() {
 
-  await News.deleteMany({});
+  // await News.deleteMany({}); // 삭제 로직, 실제에서 사용 X
   const newsCount = await News.countDocuments();
   if (newsCount === 0) {
     console.log('📦 뉴스 데이터를 새로 생성합니다 (AI 분석 스타일)...');
