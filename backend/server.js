@@ -95,6 +95,68 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // "Bearer <token>"
+
+  if (!token) return res.status(401).json({ message: "로그인이 필요합니다." });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: "유효하지 않은 토큰입니다." });
+    req.user = user; // 토큰에서 꺼낸 유저 정보(ID)를 요청에 담음
+    next();
+  });
+}
+
+// -------------------------------------------------------
+// 👤 유저 정보 및 게이미피케이션 API
+// -------------------------------------------------------
+
+// 1. 내 정보 가져오기 (프로필 화면용)
+app.get('/api/user/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('-password'); // 비번 빼고 조회
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 2. 학습 진행도 업데이트 (퀴즈 정답 시 XP 추가)
+app.post('/api/user/progress', authenticateToken, async (req, res) => {
+  try {
+    const { xpEarned, lessonId } = req.body;
+    const user = await User.findById(req.user.userId);
+
+    // 1) XP 추가
+    user.xp += xpEarned;
+
+    // 2) 레벨업 로직 (예: 100 XP마다 1 레벨업)
+    const newLevel = Math.floor(user.xp / 100) + 1;
+    if (newLevel > user.level) {
+      user.level = newLevel;
+      // (여기서 "레벨업 축하" 알림 등을 보낼 수도 있음)
+    }
+
+    // 3) 완료한 강의 목록에 추가 (중복 방지)
+    if (lessonId && !user.completedLessons.includes(lessonId)) {
+      user.completedLessons.push(lessonId);
+    }
+
+    await user.save();
+
+    res.json({ 
+      message: "학습 기록 업데이트 성공!", 
+      currentXp: user.xp, 
+      currentLevel: user.level,
+      leveledUp: newLevel > user.level 
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // -------------------------------------------------------
 // 📡 API 만들기
 // -------------------------------------------------------

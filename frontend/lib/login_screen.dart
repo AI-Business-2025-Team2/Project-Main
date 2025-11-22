@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'main.dart'; // 메인 화면으로 이동하기 위해 필요
 import 'register_screen.dart'; // 회원가입 화면으로 이동하기 위해 필요
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -48,7 +49,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         // 로그인 성공!
-        // TODO: 나중에 여기서 토큰(data['token'])을 휴대폰에 저장해야 함 (SharedPreferences)
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', data['token']);
+        await prefs.setString('nickname', data['user']['nickname']);
         
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('환영합니다, ${data['user']['nickname']}님!')));
