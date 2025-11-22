@@ -8,6 +8,7 @@ import 'profile_screen.dart';
 import 'article_detail_screen.dart';
 import 'learn_screen.dart';
 import 'review_screen.dart';
+import 'login_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,7 +27,8 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF8F9FD),
         useMaterial3: true,
       ),
-      home: const MainScreen(),
+      // home: const MainScreen(),
+      home: const LoginScreen(),
     );
   }
 }

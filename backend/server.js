@@ -5,6 +5,9 @@ const cors = require('cors');
 const News = require('./models/News');
 const Course = require('./models/Course');
 const Lesson = require('./models/Lesson');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('./models/User');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -19,6 +22,78 @@ app.use(express.json());
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB 연결 성공!'))
   .catch(err => console.error('❌ MongoDB 연결 실패:', err));
+
+// -------------------------------------------------------
+// 🔐 인증(Auth) 관련 API
+// -------------------------------------------------------
+const JWT_SECRET = "my_super_secret_key_1234"; // (보안키: 나중에 .env로 이동 추천)
+
+// 1. 회원가입 (POST /api/register)
+app.post('/api/register', async (req, res) => {
+  try {
+    const { email, password, nickname } = req.body;
+
+    // 이미 있는 이메일인지 확인
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "이미 존재하는 이메일입니다." });
+    }
+
+    // 비밀번호 암호화 (해싱)
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 유저 생성
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+      nickname,
+      xp: 0,
+      level: 1
+    });
+
+    await newUser.save();
+    res.status(201).json({ message: "회원가입 성공! 로그인해주세요." });
+
+  } catch (err) {
+    res.status(500).json({ message: "회원가입 중 오류 발생", error: err.message });
+  }
+});
+
+// 2. 로그인 (POST /api/login)
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // 유저 찾기
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "이메일 또는 비밀번호가 틀렸습니다." });
+    }
+
+    // 비밀번호 확인 (입력값 vs 암호화된 값 비교)
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "이메일 또는 비밀번호가 틀렸습니다." });
+    }
+
+    // 토큰 발급 (유저 ID를 담음)
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' }); // 7일간 유효
+
+    res.json({
+      message: "로그인 성공!",
+      token, // 이 토큰을 앱에 저장해야 함
+      user: {
+        id: user._id,
+        nickname: user.nickname,
+        xp: user.xp,
+        level: user.level
+      }
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: "로그인 중 오류 발생", error: err.message });
+  }
+});
 
 // -------------------------------------------------------
 // 📡 API 만들기
