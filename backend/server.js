@@ -157,6 +157,31 @@ app.post('/api/user/progress', authenticateToken, async (req, res) => {
   }
 });
 
+// 3. 뉴스 북마크 토글 (추가/삭제)
+app.post('/api/user/bookmark', authenticateToken, async (req, res) => {
+  try {
+    const { newsId } = req.body;
+    const user = await User.findById(req.user.userId);
+
+    // 이미 북마크 되어 있는지 확인
+    const index = user.bookmarkedNews.indexOf(newsId);
+
+    if (index === -1) {
+      // 없으면 -> 추가 (북마크 설정)
+      user.bookmarkedNews.push(newsId);
+      await user.save();
+      res.json({ message: "북마크에 저장되었습니다.", isBookmarked: true });
+    } else {
+      // 있으면 -> 삭제 (북마크 해제)
+      user.bookmarkedNews.splice(index, 1);
+      await user.save();
+      res.json({ message: "북마크가 해제되었습니다.", isBookmarked: false });
+    }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // -------------------------------------------------------
 // 📡 API 만들기
 // -------------------------------------------------------

@@ -51,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // 로그인 성공!
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', data['token']);
-        await prefs.setString('nickname', data['user']['nickname']);
+        await prefs.setString('nickname', data['user']['nickname']); 
         
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('환영합니다, ${data['user']['nickname']}님!')));

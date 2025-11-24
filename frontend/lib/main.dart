@@ -181,6 +181,7 @@ class _HomeNewsFeedState extends State<HomeNewsFeed> {
                   var item = news[index];
                   
                   return NewsCard(
+                    id: item['id'],
                     category: item['category'] ?? '뉴스',
                     source: item['source'] ?? '언론사',
                     time: item['time'] ?? '방금 전',
@@ -204,6 +205,7 @@ class _HomeNewsFeedState extends State<HomeNewsFeed> {
 
 // 뉴스 카드 위젯 (디자인 그대로 유지)
 class NewsCard extends StatelessWidget {
+  final String id;
   final String category;
   final String source;
   final String time;
@@ -218,6 +220,7 @@ class NewsCard extends StatelessWidget {
 
   const NewsCard({
     super.key,
+    required this.id,
     required this.category,
     required this.source,
     required this.time,
@@ -240,6 +243,7 @@ class NewsCard extends StatelessWidget {
             // ArticleDetailScreen에 생성자를 추가해야 데이터를 받을 수 있음
             // (일단은 UI 테스트용으로 넘기는 척만 하고, 다음 단계에서 ArticleDetailScreen 생성자를 뚫을 예정)
             builder: (context) => ArticleDetailScreen(
+              id: id,
               title: title,
               source: source,
               date: time,
