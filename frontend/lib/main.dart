@@ -138,9 +138,9 @@ class _HomeNewsFeedState extends State<HomeNewsFeed> {
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('오늘의 경제 뉴스 ✨', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Text('오늘의 경제 뉴스', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   SizedBox(height: 4),
-                  Text('뉴스로 배우는 경제 공부! 📚', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                  Text('뉴스로 배우는 경제 공부!', style: TextStyle(fontSize: 14, color: Colors.grey)),
                 ],
               ),
               Row(

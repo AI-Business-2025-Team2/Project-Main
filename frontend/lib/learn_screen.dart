@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart'; // kIsWeb 용
+import 'package:flutter/foundation.dart'; // kIsWeb 사용을 위해
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'course_detail_screen.dart';
+import 'lesson_screen.dart'; // 배너 클릭 시 바로 학습 화면으로 가기 위해
 
 class LearnScreen extends StatefulWidget {
   const LearnScreen({super.key});
@@ -14,35 +16,66 @@ class LearnScreen extends StatefulWidget {
 
 class _LearnScreenState extends State<LearnScreen> {
   late Future<List<dynamic>> courseList;
+  Map<String, dynamic>? nextLessonData; // 이어서 학습할 데이터
+  bool isLoadingNextLesson = true;
 
   @override
   void initState() {
     super.initState();
-    courseList = fetchCourses();
+    courseList = fetchCourses(); // 코스 목록 로딩
+    _fetchNextLesson(); // 다음 강의 정보 로딩
   }
 
-  // 서버에서 강의 목록 가져오기
+  // 1. 다음 강의 정보 가져오기 API (이어서 학습하기)
+  Future<void> _fetchNextLesson() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    
+    // 로그인을 안 했으면 배너를 로딩하지 않음
+    if (token == null) {
+      setState(() { isLoadingNextLesson = false; });
+      return;
+    }
+
+    String baseUrl = _getBaseUrl();
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/user/next-lesson'),
+        headers: {"Authorization": "Bearer $token"},
+      );
+      
+      if (response.statusCode == 200) {
+        setState(() {
+          nextLessonData = jsonDecode(response.body);
+          isLoadingNextLesson = false;
+        });
+      } else {
+        setState(() { isLoadingNextLesson = false; });
+      }
+    } catch (e) {
+      print("다음 강의 로딩 실패: $e");
+      setState(() { isLoadingNextLesson = false; });
+    }
+  }
+
+  // 2. 전체 코스 목록 가져오기 API
   Future<List<dynamic>> fetchCourses() async {
-    String baseUrl;
-    if (kIsWeb) {
-      baseUrl = 'http://localhost:3000';
-    } else if (Platform.isAndroid) {
-      baseUrl = 'http://10.0.2.2:3000';
-    } else {
-      baseUrl = 'http://localhost:3000';
-    }
-
+    String baseUrl = _getBaseUrl();
     final url = Uri.parse('$baseUrl/api/courses');
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('강의 목록을 불러오지 못했습니다.');
+    
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('강의 목록을 불러오지 못했습니다.');
+      }
+    } catch (e) {
+      throw Exception('서버 연결 실패: $e');
     }
   }
 
-  // 아이콘 이름(String)을 Flutter IconData로 변환하는 헬퍼 함수
+  // 3. 아이콘 이름 문자열 -> Flutter IconData 변환
   IconData getIconData(String iconName) {
     switch (iconName) {
       case 'account_balance': return Icons.account_balance;
@@ -55,12 +88,22 @@ class _LearnScreenState extends State<LearnScreen> {
     }
   }
 
+  // 4. Base URL 도우미 함수
+  String _getBaseUrl() {
+    if (kIsWeb) return 'http://localhost:3000';
+    if (Platform.isAndroid) return 'http://10.0.2.2:3000';
+    return 'http://localhost:3000';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FD),
       appBar: AppBar(
-        title: const Text('경제 학습소 🎓', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          '경제 학습소 🎓',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
@@ -83,32 +126,37 @@ class _LearnScreenState extends State<LearnScreen> {
                   border: InputBorder.none,
                   icon: Icon(Icons.search, color: Colors.grey),
                   hintText: '배우고 싶은 개념을 검색해보세요',
+                  hintStyle: TextStyle(color: Colors.grey),
                 ),
               ),
             ),
             const SizedBox(height: 24),
 
-            // 2. 이어하기 (가장 진도가 높은 강의 하나를 보여준다고 가정)
-            const Text('이어서 학습하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            // 2. 이어서 학습하기 배너
+            const Text(
+              '이어서 학습하기',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
-            // (이어하기 카드는 일단 정적인 UI 유지하거나, 추후 동적 연결 가능)
-            _buildContinueCard(), 
+            _buildContinueCard(),
 
             const SizedBox(height: 30),
 
-            // 3. 분야별 학습 (서버 데이터 연동)
-            const Text('분야별 학습', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            // 3. 분야별 학습 그리드
+            const Text(
+              '분야별 학습',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
-            
             FutureBuilder<List<dynamic>>(
               future: courseList,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
-                  return const Text('데이터를 불러올 수 없습니다.');
+                  return const Center(child: Text('데이터를 불러올 수 없습니다.'));
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Text('강의 목록이 없습니다.');
+                  return const Center(child: Text('강의 목록이 없습니다.'));
                 }
 
                 final courses = snapshot.data!;
@@ -125,25 +173,29 @@ class _LearnScreenState extends State<LearnScreen> {
                   itemCount: courses.length,
                   itemBuilder: (context, index) {
                     var course = courses[index];
-                    // DB에 저장된 Hex String (ex: '0xFF...')을 Color 객체로 변환
-                    Color cardColor = Color(int.parse(course['colorHex']));
+                    // Hex String -> Color 변환
+                    String hexColor = course['colorHex'] ?? '0xFF2196F3';
+                    Color cardColor = Color(int.parse(hexColor));
                     
                     return CategoryCard(
-                      icon: getIconData(course['iconName']),
+                      icon: getIconData(course['iconName'] ?? 'book'),
                       color: cardColor,
-                      title: course['title'],
+                      title: course['title'] ?? '제목 없음',
                       count: '${course['totalLectures']}강',
-                      onTap: () {
-                        Navigator.push(
+                      onTap: () async {
+                        // 상세 화면으로 이동 (돌아올 때까지 대기)
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => CourseDetailScreen(
-                              courseId: course['_id'], // MongoDB ID 전달
+                              courseId: course['_id'],
                               title: course['title'],
                               color: cardColor,
                             ),
                           ),
                         );
+                        // 상세 화면에서 퀴즈를 풀고 왔을 수 있으니, 배너를 새로고침
+                        _fetchNextLesson();
                       },
                     );
                   },
@@ -156,62 +208,119 @@ class _LearnScreenState extends State<LearnScreen> {
     );
   }
 
+  // 이어서 학습하기 카드 위젯
   Widget _buildContinueCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    if (isLoadingNextLesson) {
+      return const SizedBox(height: 150, child: Center(child: CircularProgressIndicator()));
+    }
+
+    // 학습할 데이터가 없거나, 로그인을 안 한 경우
+    if (nextLessonData == null || nextLessonData!['hasLesson'] == false) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(20),
         ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: const Color(0xFF8B5CF6).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                child: const Icon(Icons.menu_book, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
-              const Text('금융 기초', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-              const Spacer(),
-              const Text('45%', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Text('Chapter 3. 금리란 무엇인가?', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text('기준금리와 시장금리의 차이를 알아봅시다.', style: TextStyle(color: Colors.white70, fontSize: 14)),
-          const SizedBox(height: 20),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: 0.45,
-              backgroundColor: Colors.black.withOpacity(0.2),
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-              minHeight: 6,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "학습 기록이 없거나\n모든 강의를 완료했습니다! 🎉",
+              style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 16),
             ),
+            const SizedBox(height: 8),
+            Text(
+              nextLessonData != null ? "새로운 강의를 선택해보세요." : "로그인 후 학습을 시작해보세요.",
+              style: const TextStyle(color: Colors.black54),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 학습할 데이터가 있는 경우
+    var lesson = nextLessonData!['lesson'];
+    String courseTitle = nextLessonData!['courseTitle'];
+    Color color = Color(int.parse(nextLessonData!['courseColor']));
+
+    return GestureDetector(
+      onTap: () async {
+        // 배너 클릭 시 바로 해당 레슨 화면으로 이동
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => LessonScreen(lessonData: lesson)),
+        );
+        // 돌아오면 배너 갱신 (다음 챕터로 바뀌어야 하니까)
+        _fetchNextLesson();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [color, color.withOpacity(0.7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.play_arrow, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  courseTitle,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const Spacer(),
+                const Text(
+                  'Start',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Chapter ${lesson['chapterIndex']}. ${lesson['title']}',
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '터치하여 바로 시작하기',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+// 카테고리 카드 위젯 (수정된 버전)
 class CategoryCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String title;
   final String count;
-  final VoidCallback onTap; // 👈 [추가] 클릭 이벤트를 외부에서 받기 위해 변수 추가
+  final VoidCallback onTap; // 클릭 이벤트를 받기 위해 추가
 
   const CategoryCard({
     super.key,
@@ -219,7 +328,7 @@ class CategoryCard extends StatelessWidget {
     required this.color,
     required this.title,
     required this.count,
-    required this.onTap, // 👈 [추가] 생성자에서 필수값으로 받음
+    required this.onTap, // 생성자 필수값
   });
 
   @override
@@ -239,7 +348,7 @@ class CategoryCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap, // 👈 [연결] 받아온 함수를 여기서 실행!
+          onTap: onTap,
           borderRadius: BorderRadius.circular(20),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

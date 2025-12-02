@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart'; // 👈 [추가] 마크다운 패키지
 import 'quiz_screen.dart';
 
 class LessonScreen extends StatelessWidget {
-  // 서버에서 받은 Lesson 데이터 통째로 (title, content, quiz 등 포함)
+  // 서버에서 받은 Lesson 데이터 통째로
   final Map<String, dynamic> lessonData;
 
   const LessonScreen({
@@ -28,12 +29,16 @@ class LessonScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16.0),
           child: ElevatedButton(
             onPressed: () {
-              // 👇 [중요] 퀴즈 데이터가 있으면 QuizScreen으로 넘김
-              if (lessonData['quiz'] != null) {
+              var quizzes = lessonData['quizzes'];
+  
+              if (quizzes != null && (quizzes as List).isNotEmpty) {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => QuizScreen(quizData: lessonData['quiz']),
+                    builder: (context) => QuizScreen(
+                      quizList: quizzes,
+                      lessonId: lessonData['_id'],
+                    ),
                   ),
                 );
               } else {
@@ -73,18 +78,30 @@ class LessonScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             
-            // 진짜 제목 표시
+            // 제목
             Text(
               lessonData['title'] ?? '제목 없음',
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
             ),
             const SizedBox(height: 30),
 
-            // 진짜 본문 내용 표시
-            Text(
-              lessonData['content'] ?? '내용이 없습니다.',
-              style: const TextStyle(fontSize: 16, height: 1.8, color: Colors.black87),
+            // 👇 [수정] 마크다운 위젯으로 교체!
+            MarkdownBody(
+              data: lessonData['content'] ?? '내용이 없습니다.',
+              styleSheet: MarkdownStyleSheet(
+                // 본문 스타일
+                p: const TextStyle(fontSize: 16, height: 1.8, color: Colors.black87),
+                // 헤더 1 (#) 스타일
+                h1: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black, height: 2.0),
+                // 헤더 2 (##) 스타일
+                h2: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87, height: 1.8),
+                // 리스트 점(bullet) 스타일
+                listBullet: const TextStyle(fontSize: 16, color: Colors.black87),
+                // 강조 (**bold**) 스타일
+                strong: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D28D9)),
+              ),
             ),
+            
             const SizedBox(height: 40),
           ],
         ),

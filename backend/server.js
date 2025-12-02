@@ -256,77 +256,17 @@ app.get('/api/courses/:id/lessons', async (req, res) => {
 // -------------------------------------------------------
 
 async function seedDatabase() {
-  // 1. 뉴스 데이터 (보존 모드 - 주석 유지)
+  // 1. 뉴스 데이터 (이미 주석 처리됨)
   // await News.deleteMany({}); 
   
-  // 2. 코스 및 레슨 데이터 초기화 (개발용: 싹 지우고 다시 생성)
-  await Course.deleteMany({});
-  await Lesson.deleteMany({});
-  console.log('📦 코스 및 레슨 데이터를 새로 생성합니다...');
-
-  // (1) 코스 생성
-  const courses = await Course.insertMany([
-    {
-      title: '금융 기초',
-      description: '돈의 흐름과 기본 용어 정복',
-      iconName: 'account_balance',
-      colorHex: '0xFF2196F3', // 파랑
-      totalLectures: 3,
-      progress: 0
-    },
-    {
-      title: '주식 투자',
-      description: '차트 보는 법부터 매매까지',
-      iconName: 'show_chart',
-      colorHex: '0xFFF44336', // 빨강
-      totalLectures: 2,
-      progress: 0
-    }
-  ]);
-
-  // (2) 레슨 생성 (금융 기초 코스에 연결)
-  const financeCourseId = courses[0]._id; // 방금 만든 '금융 기초'의 ID
-
-  await Lesson.insertMany([
-    {
-      courseId: financeCourseId,
-      chapterIndex: 1,
-      title: "돈이란 무엇인가?",
-      duration: "5분",
-      content: "돈은 교환의 매개체이자 가치의 척도입니다. 과거에는 조개껍데기나 소금을 사용했지만...",
-      quiz: {
-        question: "돈의 3대 기능이 아닌 것은?",
-        options: ["교환의 매개", "가치 저장", "가치 척도", "기분 전환"],
-        answerIndex: 3
-      }
-    },
-    {
-      courseId: financeCourseId,
-      chapterIndex: 2,
-      title: "금리의 이해",
-      duration: "8분",
-      content: "금리는 돈의 가격입니다. 내가 돈을 빌려 쓰면 그 대가로 이자를 내야 하는데, 이때 적용되는 비율을 금리라고 합니다...",
-      quiz: {
-        question: "금리가 올라가면 일반적으로 발생하는 현상은?",
-        options: ["예금 증가", "대출 증가", "소비 폭발", "물가 폭등"],
-        answerIndex: 0
-      }
-    },
-    {
-      courseId: financeCourseId,
-      chapterIndex: 3,
-      title: "인플레이션과 디플레이션",
-      duration: "10분",
-      content: "인플레이션은 물가가 지속적으로 오르는 현상이고, 디플레이션은 반대로 물가가 내리는 현상입니다...",
-      quiz: {
-        question: "물가가 지속적으로 상승하는 현상을 무엇이라 하는가?",
-        options: ["인플레이션", "디플레이션", "스태그플레이션", "리세션"],
-        answerIndex: 0
-      }
-    }
-  ]);
-
-  console.log('✨ 학습 데이터 생성 완료!');
+  // 👇 [수정] 아래 줄들을 모두 주석(//) 처리하세요!
+  // await Course.deleteMany({});
+  // await Lesson.deleteMany({});
+  // console.log('📦 코스 및 레슨 데이터를 새로 생성합니다...');
+  
+  // ... (Course.insertMany, Lesson.insertMany 부분도 모두 주석 처리하거나 지우세요) ...
+  
+  console.log('✨ (서버) 데이터 초기화를 건너뜁니다.'); 
 }
 
 // DB 연결 후 시딩 실행
@@ -335,4 +275,39 @@ mongoose.connection.once('open', seedDatabase);
 // 서버 시작
 app.listen(port, () => {
   console.log(`🚀 서버가 http://localhost:${port} 에서 실행 중입니다.`);
+});
+
+app.get('/api/user/next-lesson', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    
+    // 모든 강의를 순서대로 가져옴 (코스 순 -> 챕터 순)
+    // 실제로는 Course 순서도 고려해야 하지만, 여기서는 단순히 모든 Lesson을 가져와서 비교합니다.
+    const allLessons = await Lesson.find().sort({ courseId: 1, chapterIndex: 1 });
+    
+    // 유저가 완료하지 않은 첫 번째 강의를 찾음
+    let nextLesson = null;
+    for (const lesson of allLessons) {
+      if (!user.completedLessons.includes(lesson._id)) {
+        nextLesson = lesson;
+        break; // 찾았으면 중단
+      }
+    }
+
+    if (nextLesson) {
+      // 그 강의가 속한 코스 정보도 필요하므로 가져옴
+      const course = await Course.findById(nextLesson.courseId);
+      res.json({
+        hasLesson: true,
+        lesson: nextLesson,
+        courseTitle: course ? course.title : "코스 정보 없음",
+        courseColor: course ? course.colorHex : "0xFF8B5CF6"
+      });
+    } else {
+      res.json({ hasLesson: false, message: "모든 강의를 완료했습니다!" });
+    }
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });

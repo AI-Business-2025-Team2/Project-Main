@@ -186,11 +186,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with SingleTi
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("⚡ 3줄 요약", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text("3줄 요약", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Container(width: double.infinity, padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: const Color(0xFFF8F9FD), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE2E8F0))), child: Text(widget.aiSummary, style: const TextStyle(fontSize: 15, height: 1.6, color: Colors.black87))),
           const SizedBox(height: 32),
-          const Text("💡 핵심 개념 정리", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text("핵심 개념 정리", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           if (widget.keyConcepts.isEmpty) const Text("설명할 핵심 개념이 없습니다.", style: TextStyle(color: Colors.grey)),
           ...widget.keyConcepts.map((concept) {
@@ -202,7 +202,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with SingleTi
   }
 
   Widget _buildMemoTab() {
-    return GestureDetector(onTap: () => FocusScope.of(context).unfocus(), child: Container(color: Colors.transparent, padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("📝 나만의 메모", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 12), Expanded(child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xFFFFF9C4).withOpacity(0.3), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFF0E68C))), child: const TextField(maxLines: null, expands: true, decoration: InputDecoration(hintText: "메모를 입력하세요...", border: InputBorder.none))))])));
+    return GestureDetector(onTap: () => FocusScope.of(context).unfocus(), child: Container(color: Colors.transparent, padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("나만의 메모", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), const SizedBox(height: 12), Expanded(child: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xFFFFF9C4).withOpacity(0.3), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFF0E68C))), child: const TextField(maxLines: null, expands: true, decoration: InputDecoration(hintText: "메모를 입력하세요...", border: InputBorder.none))))])));
   }
 
   List<TextSpan> _highlightKeywords(String text, List<String> keywords) {
