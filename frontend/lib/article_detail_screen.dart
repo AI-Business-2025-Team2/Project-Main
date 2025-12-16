@@ -171,7 +171,25 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> with SingleTi
           const SizedBox(height: 16),
           Text(widget.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.4)),
           const SizedBox(height: 20),
-          ClipRRect(borderRadius: BorderRadius.circular(12), child: widget.imageUrl != null ? Image.network(widget.imageUrl!, height: 200, width: double.infinity, fit: BoxFit.cover) : Container(height: 200, width: double.infinity, color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey))),
+
+          // 👇 [수정] 이미지가 존재하고(null 아님), 빈 문자열이 아닐 때만 표시
+          if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                widget.imageUrl!,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                // 혹시 URL은 있는데 로딩 에러(404 등)가 나면 숨김 처리
+                errorBuilder: (context, error, stackTrace) {
+                  return const SizedBox.shrink(); 
+                },
+              ),
+            ),
+            const SizedBox(height: 24), // 이미지가 있을 때만 간격 띄움
+          ],
+          
           const SizedBox(height: 24),
           RichText(text: TextSpan(style: const TextStyle(fontSize: 16, height: 1.8, color: Colors.black87), children: _highlightKeywords(widget.content, keywords))),
           const SizedBox(height: 40),

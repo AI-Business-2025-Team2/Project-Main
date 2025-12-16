@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'login_screen.dart'; // 로그아웃 후 이동할 화면
+import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,26 +14,41 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // 화면에 표시할 상태 변수들 (초기값)
   String nickname = "로딩중...";
   String email = "";
   int level = 1;
   int xp = 0;
+  int streak = 0;
+  List<String> studyHistory = []; // 공부한 날짜들 ("2024-05-20")
   bool isLoading = true;
+  bool _isAdminMode = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchUserProfile(); // 화면 켜지면 내 정보 가져오기
+    _loadAdminMode();
+    _fetchUserProfile();
   }
 
-  // 📡 내 정보 가져오기 (API)
+  Future<void> _loadAdminMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isAdminMode = prefs.getBool('isAdminMode') ?? false;
+    });
+  }
+
+  Future<void> _toggleAdminMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isAdminMode', value);
+    setState(() { _isAdminMode = value; });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value ? '🔓 관리자 모드 ON' : '🔒 관리자 모드 OFF')));
+  }
+
   Future<void> _fetchUserProfile() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
     if (token == null) {
-      // 토큰 없으면 로그인 화면으로 쫓아냄
       _logout();
       return;
     }
@@ -46,9 +61,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/api/user/me'),
-        headers: {
-          "Authorization": "Bearer $token", // 🔑 출입증 제시
-        },
+        headers: {"Authorization": "Bearer $token"},
       );
 
       if (response.statusCode == 200) {
@@ -58,10 +71,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           email = data['email'];
           level = data['level'];
           xp = data['xp'];
+          streak = data['streak'] ?? 0;
+          studyHistory = List<String>.from(data['studyHistory'] ?? []);
           isLoading = false;
         });
       } else {
-        // 토큰 만료 등으로 실패 시
         _logout();
       }
     } catch (e) {
@@ -70,94 +84,94 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // 🚪 로그아웃 함수
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token'); // 토큰 삭제
-    
+    await prefs.remove('token');
     if (!mounted) return;
-    // 로그인 화면으로 이동 (뒤로가기 불가)
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-      (route) => false,
-    );
+    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginScreen()), (route) => false);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    if (isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+
+    // 다음 레벨까지 필요한 XP 계산 (예: 레벨 * 100)
+    int requiredXp = level * 100;
+    // 현재 레벨에서의 진행도 (단순화를 위해 누적 XP가 아니라 현재 레벨 구간 XP로 표시하는 게 좋지만, 여기선 전체 XP 기준)
+    // UI 표시용: (현재XP % 100) / 100
+    double progress = (xp % 100) / 100.0; 
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FD),
       appBar: AppBar(
         title: const Text('내 프로필', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: false,
         backgroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {
-              // 설정 화면 (추후 구현)
-            },
-          ),
-        ],
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
             
-            // 1. 유저 정보 섹션
+            // 1. 유저 정보 및 레벨 바
             Center(
               child: Column(
                 children: [
-                  // 아바타 (랜덤 이미지 API 활용, 시드값을 닉네임으로 해서 고정된 이미지 제공)
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.grey[200],
-                      border: Border.all(color: const Color(0xFF8B5CF6), width: 3),
-                      image: DecorationImage(
-                        // 닉네임에 따라 다른 캐릭터가 나오도록 URL 설정
-                        image: NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=$nickname'),
-                        fit: BoxFit.cover,
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.grey[200],
+                          border: Border.all(color: const Color(0xFF8B5CF6), width: 3),
+                          image: DecorationImage(
+                            image: NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=$nickname'),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
-                    ),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
+                        child: Text('$level', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
-                  // 닉네임 (DB 데이터)
-                  Text(
-                    nickname,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
+                  Text(nickname, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text(
-                    email,
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 12),
-                  // 레벨 뱃지 (DB 데이터)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3E8FF),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Lv. $level 초보 투자자 🐣',
-                      style: const TextStyle(
-                        color: Color(0xFF7C3AED),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                  Text(email, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // XP 프로그레스 바
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Lv.$level', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5CF6))),
+                            Text('${xp % 100} / 100 XP', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            Text('Lv.${level + 1}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 12,
+                            backgroundColor: Colors.grey[200],
+                            color: const Color(0xFF8B5CF6),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -166,51 +180,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
             
             const SizedBox(height: 30),
 
-            // 2. 게이미피케이션 스탯 (DB 데이터)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  _buildStatCard('연속 학습', '3일', Icons.local_fire_department, Colors.orange), // (나중에 streak 연동)
-                  const SizedBox(width: 12),
-                  _buildStatCard('총 경험치', '$xp XP', Icons.bolt, Colors.yellow[700]!),
-                  const SizedBox(width: 12),
-                  _buildStatCard('학습 레벨', '$level', Icons.stars, Colors.blue),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            // 3. 메뉴 리스트
+            // 2. 스트릭 캘린더 (주간)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(color: Colors.grey.withOpacity(0.05), blurRadius: 10, spreadRadius: 2),
-                ],
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.05), blurRadius: 10, spreadRadius: 2)],
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildListTile(Icons.favorite_border, '관심 키워드 설정', '반도체, 부동산'),
-                  const Divider(height: 1, thickness: 0.5),
-                  _buildListTile(Icons.history, '최근 학습 기록', ''),
-                  const Divider(height: 1, thickness: 0.5),
-                  _buildListTile(Icons.notifications_none, '알림 설정', 'ON'),
+                  Row(
+                    children: [
+                      const Icon(Icons.local_fire_department, color: Colors.orange),
+                      const SizedBox(width: 8),
+                      Text('$streak일 연속 학습 중! 🔥', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: _buildWeeklyCalendar(),
+                  ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 30),
-            
-            // 로그아웃 버튼
-            TextButton(
-              onPressed: _logout,
-              child: const Text(
-                '로그아웃',
-                style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold),
+
+            // 3. 메뉴 리스트 (기존)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    secondary: const Icon(Icons.admin_panel_settings, color: Colors.redAccent),
+                    title: const Text('관리자 모드 (시연용)', style: TextStyle(fontWeight: FontWeight.bold)),
+                    value: _isAdminMode,
+                    activeColor: const Color(0xFF8B5CF6),
+                    onChanged: _toggleAdminMode,
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.red),
+                    title: const Text('로그아웃', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    onTap: _logout,
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 30),
@@ -220,47 +239,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(color: Colors.grey.withOpacity(0.05), blurRadius: 10, spreadRadius: 2),
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            const SizedBox(height: 4),
-            Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-          ],
-        ),
-      ),
-    );
-  }
+  // 주간 캘린더 위젯 생성 함수
+  List<Widget> _buildWeeklyCalendar() {
+    List<String> weekDays = ['월', '화', '수', '목', '금', '토', '일'];
+    DateTime now = DateTime.now();
+    // 이번 주 월요일 날짜 계산
+    DateTime monday = now.subtract(Duration(days: now.weekday - 1));
 
-  Widget _buildListTile(IconData icon, String title, String trailingText) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: const Color(0xFFF8F9FD), borderRadius: BorderRadius.circular(8)),
-        child: Icon(icon, color: const Color(0xFF8B5CF6), size: 20),
-      ),
-      title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+    return List.generate(7, (index) {
+      DateTime day = monday.add(Duration(days: index));
+      String dateStr = day.toISOString().split('T')[0]; // "2024-05-21"
+      bool isActive = studyHistory.contains(dateStr);
+      bool isToday = dateStr == now.toISOString().split('T')[0];
+
+      return Column(
         children: [
-          if (trailingText.isNotEmpty) Text(trailingText, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-          const SizedBox(width: 8),
-          const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+          Text(weekDays[index], style: TextStyle(color: isToday ? const Color(0xFF8B5CF6) : Colors.grey, fontWeight: isToday ? FontWeight.bold : FontWeight.normal)),
+          const SizedBox(height: 8),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: isActive ? Colors.orange : (isToday ? Colors.orange.withOpacity(0.2) : Colors.grey[200]),
+              shape: BoxShape.circle,
+              border: isToday ? Border.all(color: Colors.orange, width: 2) : null,
+            ),
+            child: isActive ? const Icon(Icons.check, color: Colors.white, size: 20) : null,
+          ),
         ],
-      ),
-      onTap: () {},
-    );
+      );
+    });
+  }
+}
+
+// DateTime 확장 (toISOString이 Dart 기본엔 없어서 간단 구현)
+extension DateTimeExtension on DateTime {
+  String toISOString() {
+    return "${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}T00:00:00.000Z";
   }
 }

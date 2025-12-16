@@ -122,23 +122,42 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   }
 });
 
-// 2. 학습 진행도 업데이트 (퀴즈 정답 시 XP 추가)
 app.post('/api/user/progress', authenticateToken, async (req, res) => {
   try {
     const { xpEarned, lessonId } = req.body;
     const user = await User.findById(req.user.userId);
 
-    // 1) XP 추가
+    // 1) XP 및 레벨업 처리
     user.xp += xpEarned;
-
-    // 2) 레벨업 로직 (예: 100 XP마다 1 레벨업)
+    // (예: 레벨 1->2 필요경험치 100, 2->3 필요경험치 200... 등 레벨 * 100으로 난이도 상승)
+    // 여기서는 간단하게 100점당 1업으로 유지하거나, 공식을 바꿀 수 있습니다.
     const newLevel = Math.floor(user.xp / 100) + 1;
+    let leveledUp = false;
     if (newLevel > user.level) {
       user.level = newLevel;
-      // (여기서 "레벨업 축하" 알림 등을 보낼 수도 있음)
+      leveledUp = true;
     }
 
-    // 3) 완료한 강의 목록에 추가 (중복 방지)
+    // 2) 스트릭 & 학습 기록 처리 (오늘 날짜 기준)
+    const today = new Date().toISOString().split('T')[0]; // "2024-05-21" 형태
+    
+    // 오늘 처음 공부한 거라면?
+    if (!user.studyHistory.includes(today)) {
+      user.studyHistory.push(today);
+      
+      // 어제 공부했는지 확인해서 스트릭 연결
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      if (user.studyHistory.includes(yesterdayStr)) {
+        user.streak += 1; // 연속 성공!
+      } else {
+        user.streak = 1; // 끊겼으니 다시 1일차
+      }
+    }
+
+    // 3) 완료 강의 추가
     if (lessonId && !user.completedLessons.includes(lessonId)) {
       user.completedLessons.push(lessonId);
     }
@@ -149,7 +168,9 @@ app.post('/api/user/progress', authenticateToken, async (req, res) => {
       message: "학습 기록 업데이트 성공!", 
       currentXp: user.xp, 
       currentLevel: user.level,
-      leveledUp: newLevel > user.level 
+      leveledUp: leveledUp,
+      streak: user.streak,
+      studyHistory: user.studyHistory
     });
 
   } catch (err) {
